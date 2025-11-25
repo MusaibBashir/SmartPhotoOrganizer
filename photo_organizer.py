@@ -26,7 +26,7 @@ except ImportError:
 class PhotoOrganizerApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("Smart Media Organizer | Musaib Bin Bashir")
+        self.root.title("Smart Shoot Organizer | Musaib Bin Bashir")
         self.root.geometry("1250x900")
 
         if not HAS_PIL:
@@ -74,7 +74,7 @@ class PhotoOrganizerApp:
         
         # Tab 2: Smart Renamer (New)
         self.tab_renamer = ttk.Frame(self.notebook)
-        self.notebook.add(self.tab_renamer, text="Smart Renamer")
+        self.notebook.add(self.tab_renamer, text="Smart Group & Renamer")
         self.init_smart_rename_tab()
 
         # Tab 3: Sequence Sorter
@@ -119,9 +119,7 @@ class PhotoOrganizerApp:
             if os.path.exists(p): return p
         return shutil.which("vlc")
 
-    # ==========================================
     #           TAB 1: VISUAL SORTER
-    # ==========================================
     def init_visual_tab(self):
         # 1. Top Controls
         top_frame = ttk.LabelFrame(self.tab_visual, text="Configuration")
@@ -188,7 +186,7 @@ class PhotoOrganizerApp:
         f_lbl.pack(side="right", padx=10)
         
         self.var_current_label = tk.StringVar(value="Unmarked")
-        self.colors = {"Green": "#90EE90", "Yellow": "#FFFF99", "Red": "#FFcccb", "Unmarked": "#e0e0e0"}
+        self.colors = {"Green": "#2F8026", "Yellow": "#E5D222", "Red": "#AB0000", "Unmarked": "#e0e0e0"}
 
         tk.Radiobutton(f_lbl, text="Unmarked", variable=self.var_current_label, value="Unmarked", command=self.save_label, indicatoron=0, width=8).pack(side="left", padx=2)
         tk.Radiobutton(f_lbl, text="Green", variable=self.var_current_label, value="Green", command=self.save_label, indicatoron=0, width=6, bg=self.colors["Green"], selectcolor=self.colors["Green"]).pack(side="left", padx=2)
@@ -284,13 +282,21 @@ class PhotoOrganizerApp:
             self.root.bind(f"<Control-Key-{i}>", lambda e, n=i: self.handle_shortcut(str(n)))
 
     def handle_shortcut(self, key):
-        # Determine active tab
         current_tab = self.notebook.index(self.notebook.select())
-        if current_tab == 0: # Visual Sorter
+        if current_tab == 0:
             if key == 'p': self.open_current_file()
             elif key == 'left': self.prev_image()
             elif key == 'right': self.next_image()
-        elif current_tab == 1: # Smart Renamer
+            elif key == '1':
+                self.var_current_label.set("Green")
+                self.save_label()
+            elif key == '2':
+                self.var_current_label.set("Yellow")
+                self.save_label()
+            elif key == '3':
+                self.var_current_label.set("Red")
+                self.save_label()
+        elif current_tab == 1: 
             if key == 'p': self.open_current_renamer()
             elif key == 'left': self.prev_image_renamer()
             elif key == 'right': self.next_image_renamer()
@@ -298,11 +304,8 @@ class PhotoOrganizerApp:
                 self.var_renamer_group.set(f"Group {key}")
                 self.save_group()
 
-    # ==========================================
     #           TAB 4: HELP
-    # ==========================================
     def init_help_tab(self):
-        # Main container with scrollbar
         frame = self.tab_help
         
         scrollbar = ttk.Scrollbar(frame)
@@ -312,7 +315,6 @@ class PhotoOrganizerApp:
         text_area.pack(fill="both", expand=True)
         scrollbar.config(command=text_area.yview)
         
-        # Help Content
         content = """
 SMART SHOOT ORGANIZER - USER GUIDE
 
@@ -331,6 +333,9 @@ Instructions:
 5. Click 'SORT NOW' to execute moves/deletes.
 
 Shortcuts:
+- Ctrl + 1: Mark as Green
+- Ctrl + 2: Mark as Yellow
+- Ctrl + 3: Mark as Red (Delete)
 - Left Arrow: Previous Image
 - Right Arrow: Next Image
 - P: Open file in default viewer (or VLC for video)
@@ -338,7 +343,7 @@ Shortcuts:
 - Scroll Wheel: Zoom In/Out
 - Click & Drag: Pan zoomed image
 
-TAB 2: SMART RENAMER
+TAB 2: SMART GROUP & RENAMER
 -----------------------------------------
 Purpose: Sort photos/videos into numbered groups and batch rename them chronologically.
 
@@ -546,25 +551,18 @@ Credits:
                 cam_name = manual_cam
                 if not cam_name:
                     cam_name = self.get_camera_model(src_path)
-                
-                # Sanitize inputs
                 safe_scene = "".join([c for c in scene if c.isalnum() or c in (' ', '_', '-')]).strip()
-                
-                # Format Filename
                 if cam_name:
                     safe_cam = "".join([c for c in cam_name if c.isalnum() or c in (' ', '_', '-')]).strip()
                     new_name = f"{safe_scene}_{str(idx+1).zfill(3)}_{safe_cam}{ext}"
                 else:
-                    # No Camera Name logic
                     new_name = f"{safe_scene}_{str(idx+1).zfill(3)}{ext}"
                 
                 new_path = os.path.join(dest_dir, new_name)
                 
                 try:
                     if action == "rename":
-                        # Standard Rename
                         os.rename(src_path, new_path)
-                        # Update internal lists if renamed in place
                         if new_name != fname:
                             self.renamer_files[self.renamer_files.index(fname)] = new_name
                             self.file_groups[new_name] = self.file_groups.pop(fname)
@@ -572,8 +570,6 @@ Credits:
                                 self.ribbon_widgets_renamer[new_name] = self.ribbon_widgets_renamer.pop(fname)
                     elif action == "move":
                         shutil.move(src_path, new_path)
-                        # For simplicity, we don't update the view for moved files out of root
-                        # as they are now "gone" from source dir perspective
                     elif action == "copy":
                         shutil.copy2(src_path, new_path)
                     
@@ -584,13 +580,13 @@ Credits:
             msg_action = "Renamed" if action == "rename" else "Processed"
             messagebox.showinfo("Success", f"{msg_action} {count} files in {target_group}")
             
-            # Refresh view if files were moved/renamed in place
+            # Refresh view
             self.load_images_renamer() 
             dlg.destroy()
 
         ttk.Button(dlg, text="Execute", command=run_rename).pack(pady=20)
 
-    # --- Helpers for Renamer ---
+    # Helpers for Renamer 
     def get_date_taken(self, filepath):
         """ Returns datetime object. Tries EXIF, falls back to file mod time. """
         if HAS_PIL:
@@ -642,9 +638,7 @@ Credits:
             self.current_renamer_index = self.renamer_files.index(filename)
             self.show_image_renamer()
 
-    # ==========================================
     #       SHARED / COMMON HELPERS
-    # ==========================================
     def create_thumbnail(self, filepath, size):
         ext = os.path.splitext(filepath)[1].lower()
         if ext in self.ext_imgs and HAS_PIL:
@@ -773,15 +767,12 @@ Credits:
         canvas = self.renamer_canvas if is_renamer else self.image_canvas
         canvas.delete("all")
         self.draw_canvas_image(canvas)
-        # Redraw overlays... (Simplified for brevity, same logic as zoom)
 
     def on_canvas_resize(self, event, is_renamer=False):
         if self.pil_image_raw:
             canvas = self.renamer_canvas if is_renamer else self.image_canvas
             self.draw_canvas_image(canvas)
-            # Re-draw overlays logic needed here in full impl
 
-    # --- Overlay Drawing Helpers ---
     def draw_video_overlay(self, canvas, filename):
         cw, ch = canvas.winfo_width(), canvas.winfo_height()
         cx = cw // 2 + self.img_pos_x
@@ -807,7 +798,6 @@ Credits:
         cw, ch = canvas.winfo_width(), canvas.winfo_height()
         canvas.create_text(cw//2, ch//2, text=text, fill="white")
 
-    # --- Common File Ops ---
     def open_file_external(self, folder, filename):
         fpath = os.path.abspath(os.path.join(folder, filename))
         ext = os.path.splitext(filename)[1].lower()
@@ -836,9 +826,7 @@ Credits:
             canvas.xview_moveto(pct)
         except: pass
 
-    # ==========================================
     #       VISUAL SORTER (TAB 1) LOGIC
-    # ==========================================
     def load_images_visual(self):
         folder = filedialog.askdirectory()
         if not folder: return
@@ -1022,9 +1010,7 @@ Credits:
         messagebox.showinfo("Sort Complete", f"Processed {count} files.\n(Red items were deleted)")
         self.refresh_file_list()
 
-    # ==========================================
     #           TAB 3: SEQUENCE SORTER
-    # ==========================================
     def init_sequence_tab(self):
         frame = self.tab_sequence
         ttk.Label(frame, text="Source Folder:").pack(anchor="w", padx=20, pady=(15, 0))
